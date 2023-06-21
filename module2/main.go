@@ -17,7 +17,7 @@ func main() {
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/healthz", healthz)
 
-	err := http.ListenAndServe(":80", nil)
+	err := http.ListenAndServe(":8080", nil)
 
 	// mux.HandleFunc("/healthz", healthz)
 
@@ -38,27 +38,24 @@ func getEnvVersion() string {
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("entering root handler")
-	user := r.URL.Query().Get("user")
-	env := getEnvVersion()
-	if user != "" {
-		io.WriteString(w, fmt.Sprintf("hello [%s]\n", user))
-	} else {
-		io.WriteString(w, "hello [stranger]\n")
-	}
-
-	// 1. header
-	io.WriteString(w, "===================Details of the http request header:============\n")
-	for k, v := range r.Header {
-		io.WriteString(w, fmt.Sprintf("%s=%s\n", k, v))
+	// 需要先设置响应头，再写入响应体
+	// 1. set header
+	w.Header().Set("Content-Length", "1024")
+	for key, values := range r.Header {
+		for _, value := range values {
+			// fmt.Println(key, value)
+			w.Header().Add(key, value)
+		}
 	}
 
 	// 2. get env
+	env := getEnvVersion()
 	if env != "" {
-		io.WriteString(w, fmt.Sprintf("version: %s\n", env))
+		w.Header().Add("version", env+"\n")
 	} else {
-		io.WriteString(w, "version: v1\n")
+		w.Header().Add("version", "v1\n")
 	}
+	w.WriteHeader(http.StatusOK)
 
 	// 3. get ip
 	ip := r.RemoteAddr
@@ -68,6 +65,15 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, "客户端 IP: %s\n", ip)
 
-	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "http 状态码: %d\n", http.StatusOK)
+
+	fmt.Println("entering root handler")
+	user := r.URL.Query().Get("user")
+
+	if user != "" {
+		io.WriteString(w, fmt.Sprintf("hello [%s]\n", user))
+	} else {
+		io.WriteString(w, "hello [stranger]\n")
+	}
+
 }
